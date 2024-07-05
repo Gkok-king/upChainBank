@@ -9,7 +9,7 @@ pragma solidity ^0.8.13;
 
 contract Bank {
     // admin 用户
-    address private admin = 0xd51b4c5483513CF83071fb2E0dF7dbf30c4AC503;
+    address private admin;
 
     // 存款记录map
     mapping (address => uint) depositMap;
@@ -20,6 +20,11 @@ contract Bank {
         deposit();
     }
     fallback() external payable {}
+
+    // 生成管理员
+    constructor() {
+        admin = msg.sender;
+    }
 
 
     // 定义错误
@@ -37,28 +42,29 @@ contract Bank {
 
     // 提款函数，仅管理员可调用
     function withdraw(uint value) public onlyAdmin {
-        // 获取合约的余额
-        uint256 balance = address(this).balance;
-        require(balance > 0, "No funds to withdraw");
+        // 取和存的钱不能为0
+        if(value == 0 || address(this).balance == 0){
+            revert balanceZero(msg.sender);
+        }
 
-        // 向管理员地址发送全部余额
+        // 向管理员地址发送余额
         payable(admin).transfer(value);
     }
 
     // 存款函数，允许用户存款并记录存款信息
     function deposit() public payable {
-        if(msg.value > 0){
+        if(msg.value == 0){
             revert balanceZero(msg.sender);
         }
-        if(deposits.length<3){
+        if(deposits.length < 3 &&  checkAddress() ){
             // 将存款记录添加到数组中
             deposits.push(msg.sender);
         }else{
-            // 比较方法
+            // 比较方法 保证金额前三
             replaceMinValue(msg.sender,msg.value);
         }
-        //记录金额
-        depositMap[msg.sender] = msg.value;
+        //记录具体地址金额
+        depositMap[msg.sender] += msg.value;
     }
 
     // 比较金额
@@ -74,16 +80,24 @@ contract Bank {
         }
     }
 
+    // 防止记录重复用户
+    function checkAddress() internal view returns(bool) {
+        if(deposits.length > 0){
+            for (uint i = 0; i < deposits.length; i++) {
+                if(deposits[i] == msg.sender){
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
 
     // 查看前三名用户的账户
     function getDeposit(uint256 index) public view returns (address, uint) {
-        if(index < deposits.length){
-            revert IndexOutOfBounds(index, deposits.length);
+        if(index > deposits.length){
+                revert IndexOutOfBounds(index, deposits.length);
         }
         return (deposits[index], depositMap[deposits[index]]);
     }
-
-    
-    
-
 }   
