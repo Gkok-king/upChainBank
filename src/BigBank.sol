@@ -10,6 +10,7 @@ pragma solidity ^0.8.13;
 interface Ibank {
     // 取款
     function withdraw(uint amount) external;
+
 }
 
 contract Bank is Ibank {
@@ -46,7 +47,7 @@ contract Bank is Ibank {
     }
 
     // 提款函数，仅管理员可调用
-    function withdraw(uint value) public virtual override onlyAdmin {
+    function withdraw(uint value) public override onlyAdmin {
         // 取和存的钱不能为0
         if(value == 0 || address(this).balance == 0){
             revert balanceZero(msg.sender);
@@ -57,7 +58,7 @@ contract Bank is Ibank {
     }
 
     // 存款函数，允许用户存款并记录存款信息
-    function deposit() public payable {
+    function deposit() public virtual  payable {
         if(msg.value == 0){
             revert balanceZero(msg.sender);
         }
@@ -114,9 +115,9 @@ contract BigBank is Bank {
     error  moneyIsTooLess(uint amount);
     uint256 constant MINIMUM_DEPOSIT = 0.001 ether;
 
-    // 初始化时把 BigBank 的管理员转移给Ownable 合约
-    constructor(address ownableAddress) {
-        admin = ownableAddress; 
+    // 初始化时把 先是自己
+    constructor() {
+        admin = msg.sender; 
     }
  
     // 限制最小金额
@@ -126,21 +127,39 @@ contract BigBank is Bank {
         }
         _;
     }
-    
+
     // 重用父类方法
-    function withdraw(uint amount) public override limitAmount(amount) {
-        super.withdraw(amount);
+    function deposit() public payable override limitAmount(msg.value){
+        super.deposit();
+    }
+    
+    // 转移权限
+    function transferAdmin(address otherAdmin) public onlyAdmin() {
+        admin = otherAdmin;
     }
 
 }   
 
 
-
-
 contract Ownable  {
-    Ibank public b;
+    address owner;
+    BigBank public b;
+
+    constructor(BigBank bigBank){
+        b = bigBank;
+        owner = msg.sender;
+    }
+    receive() external payable {}
+
+    // 提取BigBank的钱到合约
     function withdraw(uint amount) public {
         b.withdraw(amount);
+    }
+
+    //合约部署的人自己提
+    function ownerWithdraw(uint amount) public {
+        require(owner == msg.sender, "stop");
+        payable(owner).transfer(amount);
     }
 }
 
