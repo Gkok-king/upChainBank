@@ -22,7 +22,7 @@ contract BaseERC20 {
     event Transfer(address indexed from, address indexed to, uint256 value);
     event Approval(address indexed owner, address indexed spender, uint256 value);
 
-    constructor() public {
+    constructor() {
         // write your code here
         // set name,symbol,decimals,totalSupply
         name = "BaseERC20";
@@ -32,11 +32,13 @@ contract BaseERC20 {
         balances[msg.sender] = totalSupply;  
     }
 
+    //允许任何人查看任何地址的 Token 余额
     function balanceOf(address _owner) public view returns (uint256 balance) {
         // write your code here
         return balances[_owner];
     }
 
+    //允许 Token 的所有者将他们的 Token 发送给任何人
     function transfer(address _to, uint256 _value) public returns (bool success) {
         // write your code here
         require(balances[msg.sender] >= _value, "ERC20: transfer amount exceeds balance");
@@ -49,6 +51,7 @@ contract BaseERC20 {
         return true;   
     }
 
+    //允许 Token 的所有者批准某个地址消费他们的一部分Token
     function transferFrom(address _from, address _to, uint256 _value) public returns (bool success) {
         // write your code here
         require(balances[_from] >= _value, "ERC20: transfer amount exceeds balance");
@@ -63,6 +66,7 @@ contract BaseERC20 {
         return true; 
     }
 
+    //允许 Token 的所有者批准某个地址消费他们的一部分Token
     function approve(address _spender, uint256 _value) public returns (bool success) {
         // write your code here
         // 我觉得授权这里就需要限制下，但写了测试过不了...
@@ -74,7 +78,7 @@ contract BaseERC20 {
         emit Approval(msg.sender, _spender, _value);  
         return true; 
     }
-
+    //允许任何人查看一个地址可以从其它账户中转账的代币数量
     function allowance(address _owner, address _spender) public view returns (uint256 remaining) {   
         // write your code here     
         return allowances[_owner][_spender];
