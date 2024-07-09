@@ -6,6 +6,7 @@ pragma solidity ^0.8.13;
 import "./IERC20.sol";
 import "./Address.sol";
 import "./TokensReceived.sol";
+import "../NFT/COCO.sol";
 
 contract BaseERC20 is IERC20 {
     using Address for address;
@@ -127,6 +128,8 @@ contract BaseERC20 is IERC20 {
 
 contract TokenBank is TokensReceived {
     IERC20 public token;
+    IERC721 public nftContract; // 使用 COCO 合约类型
+    uint256 public nftTokenId;
 
     // 存款记录map
     mapping(address => uint) tokenBalances;
@@ -135,8 +138,9 @@ contract TokenBank is TokensReceived {
 
     fallback() external payable {}
 
-    constructor(address tokenAddress) {
+    constructor(address tokenAddress, address cocoAddress) {
         token = IERC20(tokenAddress);
+        coco = COCO(cocoAddress); // 初始化为 COCO 合约地址
     }
 
     // 定义错误
@@ -177,11 +181,21 @@ contract TokenBank is TokensReceived {
         require(success, "Call failed");
     }
 
+    //回掉函数
     function tokensReceived(
         address to,
         uint256 amount
     ) external override returns (bool) {
-        //这里干一些想干的事
+        //这里干一些想干的事 现在是买个 NFT ID。
+
+        address nftOwner = ERC721(to).ownerOf(nftTokenId);
+        require(nftOwner != address(0), "NFT owner not found");
+
+        // 将 ERC20 代币转给 NFT 所有者
+        require(token.transfer(nftOwner, amount), "Token transfer failed");
+
+        // 将 NFT 转给买家
+        nftContract.transferFrom(nftOwner, from, nftTokenId);
         return true;
     }
 }
