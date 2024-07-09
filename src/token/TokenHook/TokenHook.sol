@@ -1,13 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-
 //
 
 import "./IERC20.sol";
 import "./Address.sol";
 import "./TokensReceived.sol";
-
 
 contract BaseERC20 is IERC20 {
     using Address for address;
@@ -115,19 +113,17 @@ contract BaseERC20 is IERC20 {
         address recipient,
         uint256 amount
     ) external override returns (bool) {
-
         transfer(msg.sender, recipient, amount);
-            if (recipient.isContract()) {
-            bool rv = TokensReceived(recipient).tokensReceived(msg.sender, amount);
-                require(rv, "No tokensReceived");
-            }
+        if (recipient.isContract()) {
+            bool rv = TokensReceived(recipient).tokensReceived(
+                msg.sender,
+                amount
+            );
+            require(rv, "No tokensReceived");
+        }
         return true;
-
     }
 }
-
-
-
 
 contract TokenBank is TokensReceived {
     IERC20 public token;
@@ -186,6 +182,6 @@ contract TokenBank is TokensReceived {
         uint256 amount
     ) external override returns (bool) {
         //这里干一些想干的事
-        return false;
+        return true;
     }
-}   
+}
