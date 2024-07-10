@@ -3,9 +3,9 @@ pragma solidity ^0.8.13;
 
 // 回调函数
 interface TokensReceived {
-
     function tokensReceived(
+        address from,
         address to,
-        uint256 amount
-    ) external returns(bool);
-}   
+        uint256 tokenId
+    ) external returns (bool);
+}

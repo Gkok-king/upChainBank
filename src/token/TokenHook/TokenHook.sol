@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.13;
+pragma solidity ^0.8.20;
 
 //
 
@@ -47,15 +47,15 @@ contract BaseERC20 is IERC20 {
     ) public override returns (bool success) {
         // write your code here
         require(
-            balances[msg.sender] >= _value,
+            balances[_send] >= _value,
             "ERC20: transfer amount exceeds balance"
         );
         require(_to != address(0), "ERC20: transfer to the zero address");
 
-        balances[msg.sender] -= _value;
+        balances[_send] -= _value;
         balances[_to] += _value;
 
-        emit Transfer(msg.sender, _to, _value);
+        emit Transfer(_send, _to, _value);
         return true;
     }
 
@@ -110,14 +110,16 @@ contract BaseERC20 is IERC20 {
     }
 
     function transferWitchCallback(
-        address sennd,
+        address send,
         address recipient,
         uint256 amount
     ) external override returns (bool) {
         transfer(msg.sender, recipient, amount);
         if (recipient.isContract()) {
+            // 这里recipient选错了怎么办，考虑这一点就可以学习，openzeppelin，
             bool rv = TokensReceived(recipient).tokensReceived(
-                msg.sender,
+                send,
+                recipient,
                 amount
             );
             require(rv, "No tokensReceived");
@@ -127,7 +129,7 @@ contract BaseERC20 is IERC20 {
 }
 
 contract TokenBank is TokensReceived {
-    IERC20 public token;
+    BaseERC20 public token;
     ERC721 public nftContract; // 使用 COCO 合约类型
     uint256 public nftTokenId;
 
@@ -139,8 +141,8 @@ contract TokenBank is TokensReceived {
     fallback() external payable {}
 
     constructor(address tokenAddress, address cocoAddress) {
-        token = IERC20(tokenAddress);
-        coco = COCO(cocoAddress); // 初始化为 COCO 合约地址
+        token = BaseERC20(tokenAddress);
+        nftContract = COCO(cocoAddress); // 初始化为 COCO 合约地址
     }
 
     // 定义错误
@@ -174,25 +176,19 @@ contract TokenBank is TokensReceived {
         tokenBalances[msg.sender] += value;
     }
 
-    function callSetValue(address target, uint256 value) public {
-        (bool success, ) = target.call(
-            abi.encodeWithSignature("setValue(uint256)", value)
-        );
-        require(success, "Call failed");
-    }
-
     //回掉函数
     function tokensReceived(
+        address from,
         address to,
-        uint256 amount
+        uint256 tokenId
     ) external override returns (bool) {
         //这里干一些想干的事 现在是买个 NFT ID。
-        address nftOwner = ERC721(to).ownerOf(nftTokenId);
+        address nftOwner = ERC721(to).ownerOf(tokenId);
         require(nftOwner != address(0), "NFT owner not found");
         // 将 ERC20 代币转给 NFT 所有者
-        require(token.transfer(nftOwner, amount), "Token transfer failed");
+        require(token.transfer(nftOwner, to, tokenId), "Token transfer failed");
         // 将 NFT 转给买家
-        nftContract.transferFrom(nftOwner, from, nftTokenId);
+        nftContract.transferFrom(nftOwner, from, tokenId);
         return true;
     }
 }

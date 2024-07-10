@@ -2,6 +2,8 @@
 src = "src"
 out = "out"
 libs = ["lib"]
+solc = "0.8.20" 
+
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
 sepolia = "https://sepolia.infura.io/v3/977f9a3310104079aef20dc9a6507f6"
