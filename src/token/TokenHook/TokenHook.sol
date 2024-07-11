@@ -128,7 +128,7 @@ contract BaseERC20 is IERC20 {
     }
 }
 
-contract TokenBank is TokensReceived {
+contract TokenBank {
     BaseERC20 public token;
     ERC721 public nftContract; // 使用 COCO 合约类型
     uint256 public nftTokenId;
@@ -174,21 +174,5 @@ contract TokenBank is TokensReceived {
             "TransferFrom failed"
         );
         tokenBalances[msg.sender] += value;
-    }
-
-    //回掉函数
-    function tokensReceived(
-        address from,
-        address to,
-        uint256 tokenId
-    ) external override returns (bool) {
-        //这里干一些想干的事 现在是买个 NFT ID。
-        address nftOwner = ERC721(to).ownerOf(tokenId);
-        require(nftOwner != address(0), "NFT owner not found");
-        // 将 ERC20 代币转给 NFT 所有者
-        require(token.transfer(nftOwner, to, tokenId), "Token transfer failed");
-        // 将 NFT 转给买家
-        nftContract.transferFrom(nftOwner, from, tokenId);
-        return true;
     }
 }

@@ -66,4 +66,33 @@ contract NFTMarketPlace {
 
         emit NFTBought(tokenId, listing.price, msg.sender, listing.seller);
     }
+
+    function onTransferReceived(
+        address from,
+        uint256 value,
+        bytes memory data
+    ) external returns (bytes4) {
+        require(msg.sender == address(token), "Invalid token contract");
+        uint256 tokenId = abi.decode(data, (uint256));
+        Listing memory listing = listings[tokenId];
+        require(listing.seller != address(0), "NFT not listed");
+        require(value >= listing.price, "Insufficient payment");
+        // 处理购买逻辑
+        delete listings[tokenId];
+
+        // 转移 NFT 给买家
+        token.transferFrom(address(this), from, tokenId);
+
+        // 如果支付金额超过价格，退还多余的代币
+        if (value > listing.price) {
+            uint256 refund = value - listing.price;
+            require(token.transfer(from, refund), "Refund failed");
+        }
+        // 将价格转给卖家
+        require(
+            token.transfer(listing.seller, listing.price),
+            "Payment transfer failed"
+        );
+        return this.onTransferReceived.selector;
+    }
 }
