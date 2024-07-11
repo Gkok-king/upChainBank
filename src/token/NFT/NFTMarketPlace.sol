@@ -2,17 +2,18 @@
 pragma solidity ^0.8.13;
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 
 import "./COCO.sol";
+import "./TokensReceived.sol";
 
 // //编写一个简单的 NFT市场合约，使用自己的发行的 Token 来买卖 NFT， 函数的方法有：
 
 // list() : 实现上架功能，NFT 持有者可以设定一个价格（需要多少个 Token 购买该 NFT）并上架 NFT 到 NFT 市场。
 // buyNFT() : 实现购买 NFT 功能，用户转入所定价的 token 数量，获得对应的 NFT。
-contract NFTMarketPlace {
+contract NFTMarketPlace is TokensReceived {
     IERC20 public token;
     COCO public nft;
 
@@ -67,32 +68,34 @@ contract NFTMarketPlace {
         emit NFTBought(tokenId, listing.price, msg.sender, listing.seller);
     }
 
-    function onTransferReceived(
+    function tokensReceived(
         address from,
-        uint256 value,
+        address to,
+        uint256 amount,
         bytes memory data
-    ) external returns (bytes4) {
-        require(msg.sender == address(token), "Invalid token contract");
+    ) external override returns (bool) {
         uint256 tokenId = abi.decode(data, (uint256));
         Listing memory listing = listings[tokenId];
-        require(listing.seller != address(0), "NFT not listed");
-        require(value >= listing.price, "Insufficient payment");
         // 处理购买逻辑
         delete listings[tokenId];
 
         // 转移 NFT 给买家
-        token.transferFrom(address(this), from, tokenId);
+        nft.safeTransferFrom(address(this), from, tokenId);
 
         // 如果支付金额超过价格，退还多余的代币
-        if (value > listing.price) {
-            uint256 refund = value - listing.price;
+        if (amount > listing.price) {
+            uint256 refund = amount - listing.price;
             require(token.transfer(from, refund), "Refund failed");
         }
+
         // 将价格转给卖家
         require(
             token.transfer(listing.seller, listing.price),
             "Payment transfer failed"
         );
-        return this.onTransferReceived.selector;
+
+        emit NFTBought(tokenId, listing.price, msg.sender, listing.seller);
+
+        return true;
     }
 }

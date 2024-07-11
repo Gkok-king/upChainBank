@@ -6,6 +6,7 @@ interface TokensReceived {
     function tokensReceived(
         address from,
         address to,
-        uint256 tokenId
+        uint256 tokenId,
+        bytes memory data
     ) external returns (bool);
 }

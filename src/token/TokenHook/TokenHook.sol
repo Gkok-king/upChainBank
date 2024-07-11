@@ -109,10 +109,12 @@ contract BaseERC20 is IERC20 {
         return allowances[_owner][_spender];
     }
 
+    // 这里完成一次购买
     function transferWitchCallback(
         address send,
         address recipient,
-        uint256 amount
+        uint256 amount,
+        bytes memory data
     ) external override returns (bool) {
         transfer(msg.sender, recipient, amount);
         if (recipient.isContract()) {
@@ -120,7 +122,8 @@ contract BaseERC20 is IERC20 {
             bool rv = TokensReceived(recipient).tokensReceived(
                 send,
                 recipient,
-                amount
+                amount,
+                data
             );
             require(rv, "No tokensReceived");
         }
