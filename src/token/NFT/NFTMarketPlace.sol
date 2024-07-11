@@ -74,12 +74,15 @@ contract NFTMarketPlace is TokensReceived {
         uint256 amount,
         bytes memory data
     ) external override returns (bool) {
+        // 限制
+        require(msg.sender == address(token), "Invalid token contract");
+
         uint256 tokenId = abi.decode(data, (uint256));
         Listing memory listing = listings[tokenId];
-        // 处理购买逻辑
+        // 删除上架
         delete listings[tokenId];
 
-        // 转移 NFT 给买家
+        // 转给买家
         nft.safeTransferFrom(address(this), from, tokenId);
 
         // 如果支付金额超过价格，退还多余的代币
@@ -88,7 +91,7 @@ contract NFTMarketPlace is TokensReceived {
             require(token.transfer(from, refund), "Refund failed");
         }
 
-        // 将价格转给卖家
+        // 将多的钱转给卖家
         require(
             token.transfer(listing.seller, listing.price),
             "Payment transfer failed"
